@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratorio de Entrenamiento: Diagrama de Caja y Bigotes</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- MathJax para renderizado de fórmulas matemáticas -->
+    <script>
+        window.pendingTypeset = false;
+        window.MathJax = {
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+            },
+            startup: {
+                typeset: false,
+                pageReady: () => MathJax.startup.defaultPageReady().then(() =>
+                    window.pendingTypeset ? MathJax.typesetPromise() : null
+                )
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Nunito', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: '#8b5cf6', // Violet
+                        secondary: '#ec4899', // Pink
+                        accent: '#f59e0b', // Amber
+                        dark: '#0f172a',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root { --ring: rgba(139, 92, 246, .35); }
+        html { scroll-padding-top: 5rem; }
+        body {
+            background-color: #f8fafc;
+            background-image:
+                radial-gradient(1100px 480px at 8% -8%, rgba(139, 92, 246, .08), transparent 60%),
+                radial-gradient(900px 420px at 100% 0%, rgba(236, 72, 153, .06), transparent 60%);
+            background-attachment: fixed;
+        }
+        :focus-visible { outline: 3px solid var(--ring); outline-offset: 2px; border-radius: .5rem; }
+        textarea:focus-visible { outline: none; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        /* ---------- Hero ---------- */
+        .hero-grid {
+            background-image:
+                linear-gradient(rgba(255, 255, 255, .06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, .06) 1px, transparent 1px);
+            background-size: 44px 44px;
+            -webkit-mask-image: radial-gradient(ellipse at center, #000 35%, transparent 75%);
+            mask-image: radial-gradient(ellipse at center, #000 35%, transparent 75%);
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float { animation: float 4s ease-in-out infinite; }
+
+        /* ---------- Soluciones desplegables ---------- */
+        .solution-content {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows .4s ease-out;
+        }
+        .solution-content.open { grid-template-rows: 1fr; }
+        .solution-inner { overflow: hidden; min-height: 0; }
+
+        /* ---------- Opciones de selección múltiple ---------- */
+        button.is-correct { border-color: #10b981; background: #ecfdf5; color: #065f46; box-shadow: 0 0 0 3px rgba(16, 185, 129, .18); }
+        button.is-wrong { border-color: #f43f5e; background: #fff1f2; color: #9f1239; box-shadow: 0 0 0 3px rgba(244, 63, 94, .15); }
+
+        /* ---------- Tarjetas de ejercicios ---------- */
+        .xc {
+            position: relative; overflow: hidden; background: #fff;
+            border: 2px solid var(--t100); border-radius: 1.5rem; padding: 1.5rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+            transition: transform .3s ease, box-shadow .3s ease;
+        }
+        .xc:hover { transform: translateY(-4px); box-shadow: 0 22px 40px -24px var(--t500); }
+        .xc-blob {
+            position: absolute; right: -1.5rem; top: -1.5rem; width: 8rem; height: 8rem; border-radius: 9999px;
+            background: linear-gradient(to bottom left, var(--t100), transparent);
+            opacity: .6; transition: transform .7s ease, opacity .7s ease; pointer-events: none;
+        }
+        .xc:hover .xc-blob { transform: scale(1.6); opacity: 1; }
+        .xc-icon {
+            flex-shrink: 0; width: 3.5rem; height: 3.5rem; border-radius: 1rem;
+            display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+            background: var(--t50); color: var(--t500); transition: all .3s ease;
+        }
+        .xc:hover .xc-icon { background: var(--t500); color: #fff; }
+        .xc-tag {
+            display: inline-block; font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase;
+            color: var(--t600); background: var(--t50); border: 1px solid var(--t100);
+            padding: .2rem .5rem; border-radius: .375rem;
+        }
+        .xc-problem { color: #475569; font-weight: 500; line-height: 1.65; font-size: .9rem; margin-bottom: 1.25rem; }
+        .xc-sol { background: #f8fafc; border-radius: 1rem; }
+        .xc-sol-body { padding: 1.25rem; border-top: 4px solid var(--t400); }
+        .xc-steps { list-style: none; margin: 0 0 1.25rem; padding: 0; display: flex; flex-direction: column; gap: .75rem; font-size: .875rem; color: #334155; }
+        .xc-step {
+            display: flex; align-items: flex-start; gap: .75rem; background: #fff; padding: .75rem;
+            border-radius: .75rem; border: 1px solid #f1f5f9; box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+            transition: border-color .2s ease;
+        }
+        .xc-step:hover { border-color: var(--t200); }
+        .xc-step > span:last-child { min-width: 0; max-width: 100%; overflow-x: auto; }
+        .xc-num {
+            flex-shrink: 0; width: 1.5rem; height: 1.5rem; margin-top: .1rem; border-radius: 9999px;
+            display: flex; align-items: center; justify-content: center; font-size: .75rem; font-weight: 800;
+            background: var(--t100); color: var(--t600); border: 1px solid var(--t200);
+        }
+        .xc-answer {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem;
+            background: var(--t50); border: 1px solid var(--t200); border-radius: .75rem; padding: 1rem;
+        }
+        .xc-op { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .8rem; font-weight: 700; color: var(--t700); }
+        .xc-ans {
+            display: flex; align-items: center; gap: .5rem; background: #fff; padding: .5rem 1rem;
+            border-radius: .5rem; border: 1px solid var(--t100); box-shadow: 0 1px 2px rgba(15, 23, 42, .05);
+        }
+        .xc-ans small { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 800; color: #94a3b8; }
+        .xc-ans strong { font-weight: 900; color: var(--t600); font-size: 1rem; }
+        .xc-btn {
+            width: 100%; margin-top: 1rem; padding: .75rem; border-radius: .75rem; font-weight: 700;
+            background: var(--t50); color: var(--t600); border: 1px solid var(--t200); transition: all .2s ease;
+        }
+        .xc-btn:hover { background: var(--t100); }
+        .xc-btn.is-open { background: var(--t600); color: #fff; border-color: var(--t600); box-shadow: 0 10px 18px -10px var(--t600); }
+
+        /* ---------- Gráfico SVG ---------- */
+        @keyframes bpGrow {
+            from { opacity: 0; transform: scaleX(.3); }
+            to { opacity: 1; transform: scaleX(1); }
+        }
+        .bp-anim { transform-box: fill-box; transform-origin: center; animation: bpGrow .7s cubic-bezier(.2, .8, .2, 1) both; }
+        .bp-pop { transform-box: fill-box; transform-origin: center; animation: bpGrow .5s .35s ease both; }
+
+        /* ---------- MathJax ---------- */
+        mjx-container { max-width: 100%; }
+        mjx-container[jax="CHTML"][display="true"] { overflow-x: auto; overflow-y: hidden; padding: .25rem 0; }
+
+        /* ---------- Scrollbar ---------- */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .animate-float, .bp-anim, .bp-pop { animation: none; }
+            html { scroll-behavior: auto; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased selection:bg-violet-200 selection:text-violet-900 bg-slate-50">
+
+    <!-- Navbar Simplificada -->
+    <nav class="fixed inset-x-0 top-0 z-50 glass-panel border-b border-slate-200/60 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-2.5">
+                <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 text-white flex items-center justify-center shadow-md shadow-violet-500/30">
+                    <i class="fas fa-boxes-stacked"></i>
+                </span>
+                <span class="font-heading font-extrabold text-xl text-slate-800">Neuro<span class="text-violet-600">Tutor</span></span>
+            </a>
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full border border-slate-200">
+                <i class="fas fa-graduation-cap text-violet-500 mr-1"></i> Laboratorio Integral
+            </span>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <header class="relative pt-32 pb-16 sm:pt-28 lg:pt-36 lg:pb-24 overflow-hidden bg-slate-900">
+        <div class="absolute inset-0 hero-grid"></div>
+        <div class="absolute inset-0 bg-gradient-to-br from-violet-950/90 via-slate-900/80 to-pink-950/90"></div>
+        <div class="absolute top-0 right-1/4 w-[600px] h-[300px] bg-pink-500 rounded-full blur-[120px] opacity-30 pointer-events-none animate-pulse"></div>
+        <div class="absolute bottom-0 left-1/4 w-[500px] h-[300px] bg-violet-600 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
+
+        <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+            <span class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/20 text-violet-200 text-sm font-bold tracking-wide border border-violet-400/30 mb-6 animate-float backdrop-blur-sm shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+                <i class="fas fa-chart-simple"></i> Estadística Descriptiva
+            </span>
+            <h1 class="text-4xl md:text-6xl font-heading font-black text-white mb-6 leading-tight drop-shadow-2xl">
+                Análisis de Dispersión:<br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-pink-400 via-purple-400 to-violet-400">Diagrama de Caja y Bigotes</span>
+            </h1>
+            <p class="mt-4 text-lg md:text-xl text-slate-300 max-w-3xl mx-auto font-light">
+                Domina el cálculo de Cuartiles ($Q_1, Q_2, Q_3$), Rango Intercuartílico (RIC) y Atípicos para datos agrupados y no agrupados en una sola experiencia de aprendizaje.
+            </p>
+
+            <!-- Ilustración decorativa -->
+            <svg viewBox="0 0 520 120" class="mx-auto mt-10 w-full max-w-xl" aria-hidden="true">
+                <defs>
+                    <linearGradient id="heroBox" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#a78bfa" stop-opacity=".55"/>
+                        <stop offset="100%" stop-color="#ec4899" stop-opacity=".45"/>
+                    </linearGradient>
+                </defs>
+                <line x1="30" y1="52" x2="490" y2="52" stroke="rgba(255,255,255,.18)" stroke-width="2" stroke-dasharray="2 7" stroke-linecap="round"/>
+                <line x1="62" y1="52" x2="172" y2="52" stroke="#e9d5ff" stroke-width="3" stroke-linecap="round"/>
+                <line x1="62" y1="34" x2="62" y2="70" stroke="#e9d5ff" stroke-width="4" stroke-linecap="round"/>
+                <rect x="172" y="22" width="178" height="60" rx="12" fill="url(#heroBox)" stroke="#d8b4fe" stroke-width="2.5"/>
+                <line x1="248" y1="22" x2="248" y2="82" stroke="#fde047" stroke-width="5" stroke-linecap="round"/>
+                <line x1="350" y1="52" x2="432" y2="52" stroke="#e9d5ff" stroke-width="3" stroke-linecap="round"/>
+                <line x1="432" y1="34" x2="432" y2="70" stroke="#e9d5ff" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="478" cy="52" r="7" fill="#f43f5e" stroke="#fff" stroke-width="2"/>
+                <g font-family="Nunito, sans-serif" font-weight="800" font-size="14" fill="#e9d5ff" text-anchor="middle">
+                    <text x="172" y="108">Q1</text>
+                    <text x="248" y="14" fill="#fde047">Q2</text>
+                    <text x="350" y="108">Q3</text>
+                    <text x="478" y="82" fill="#fda4af" font-size="12">atípico</text>
+                </g>
+            </svg>
+        </div>
+    </header>
+
+    <!-- Main Content (Pestaña Única Continuada) -->
+    <main>
+        <!-- 1. Generador Dinámico (SVG Boxplot) -->
+        <section id="explorer" class="py-16 bg-white relative">
+            <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <span class="text-violet-600 font-bold tracking-wider uppercase text-sm mb-2 block">Motor de Renderizado Dual</span>
+                    <h2 class="text-3xl md:text-4xl font-heading font-black text-slate-800">Generador Dinámico de Boxplot</h2>
+                    <p class="text-slate-500 mt-4 max-w-2xl mx-auto">Ingresa tus datos y visualiza al instante los diagramas y el desglose de las fórmulas, tanto para series de datos sueltos como para tablas de frecuencias.</p>
+                </div>
+
+                <!-- CASO 1: DATOS NO AGRUPADOS -->
+                <div class="mb-20">
+                    <h3 class="text-2xl font-heading font-black text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-violet-100 text-violet-600 w-10 h-10 flex items-center justify-center rounded-xl shadow-sm border border-violet-200"><i class="fas fa-list-ol"></i></span> 
+                        Caso 1: Datos No Agrupados (Sueltos)
+                    </h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 bg-slate-50 p-6 md:p-8 rounded-3xl border border-slate-200 shadow-sm mb-6">
+                        
+                        <!-- Inputs -->
+                        <div class="lg:col-span-1 space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Tus Datos</label>
+                                <textarea id="data-input" rows="4" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-violet-500 focus:border-violet-500 block p-3 font-medium outline-none resize-none" placeholder="Ej: 12, 15, 18, 20, 22, 25, 45...">10, 15, 15, 17, 19, 20, 22, 25, 27, 45</textarea>
+                                <p class="text-xs text-slate-500 mt-2">Separa los números con comas (si usas coma decimal, separa con punto y coma o con saltos de línea).</p>
+                            </div>
+                            
+                            <button onclick="processBoxplot('ungrouped')" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md shadow-violet-500/20">
+                                <i class="fas fa-magic mr-2"></i> Calcular y Dibujar
+                            </button>
+                            <p id="err-ungrouped" role="alert" class="hidden text-sm font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"></p>
+                        </div>
+
+                        <!-- SVG Canvas -->
+                        <div class="lg:col-span-2 w-full min-h-[400px] relative bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center overflow-x-auto">
+                            <h3 class="text-lg font-bold text-slate-700 mb-4 font-heading w-full text-center">Visualización del Diagrama</h3>
+                            <div id="svg-container-ungrouped" class="w-full min-w-[520px]">
+                                <!-- SVG injected here -->
+                            </div>
+                            <p class="text-xs text-slate-400 mt-4 text-center"><i class="fas fa-info-circle"></i> Los puntos rojos representan valores atípicos (outliers).</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Stats display -->
+                    <div id="stats-panel-ungrouped" class="w-full hidden transition-all duration-500">
+                        <!-- Filled via JS -->
+                    </div>
+                </div>
+
+                <!-- CASO 2: DATOS AGRUPADOS -->
+                <div>
+                    <h3 class="text-2xl font-heading font-black text-slate-800 mb-6 flex items-center gap-3">
+                        <span class="bg-blue-100 text-blue-600 w-10 h-10 flex items-center justify-center rounded-xl shadow-sm border border-blue-200"><i class="fas fa-table-list"></i></span> 
+                        Caso 2: Datos Agrupados (Intervalos)
+                    </h3>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 bg-blue-50/30 p-6 md:p-8 rounded-3xl border border-blue-100 shadow-sm mb-6">
+                        
+                        <!-- Inputs -->
+                        <div class="lg:col-span-1 space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                            <div>
+                                <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">Intervalos y Frecuencias</label>
+                                <textarea id="data-grouped-input" rows="4" class="w-full bg-slate-50 border border-slate-200 text-slate-800 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-3 font-medium outline-none resize-none" placeholder="Ej:&#10;10-20, 5&#10;20-30, 12&#10;30-40, 18">10-20, 5&#10;20-30, 12&#10;30-40, 18&#10;40-50, 10&#10;50-60, 5</textarea>
+                                <p class="text-xs text-slate-500 mt-2">Formato por línea: <strong>LimInf - LimSup, Frecuencia</strong></p>
+                            </div>
+
+                            <button onclick="processBoxplot('grouped')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-md shadow-blue-500/20">
+                                <i class="fas fa-magic mr-2"></i> Calcular y Dibujar
+                            </button>
+                            <p id="err-grouped" role="alert" class="hidden text-sm font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"></p>
+                        </div>
+
+                        <!-- SVG Canvas -->
+                        <div class="lg:col-span-2 w-full min-h-[400px] relative bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-center items-center overflow-x-auto">
+                            <h3 class="text-lg font-bold text-slate-700 mb-4 font-heading w-full text-center">Visualización del Diagrama</h3>
+                            <div id="svg-container-grouped" class="w-full min-w-[520px]">
+                                <!-- SVG injected here -->
+                            </div>
+                            <p class="text-xs text-slate-400 mt-4 text-center"><i class="fas fa-info-circle"></i> Los bigotes se asumen continuos hasta los límites extremos de la tabla.</p>
+                        </div>
+                    </div>
+
+                    <!-- Stats display -->
+                    <div id="stats-panel-grouped" class="w-full hidden transition-all duration-500">
+                        <!-- Filled via JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Conceptos Clave (Fórmulas) -->
+        <section id="casos" class="py-16 bg-slate-50 relative border-t border-slate-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <span class="text-violet-600 font-bold tracking-wider uppercase text-sm mb-2 block">Teoría y Fórmulas</span>
+                    <h2 class="text-3xl md:text-4xl font-heading font-black text-slate-800">Caja de Herramientas y Asimetría</h2>
+                    <p class="text-slate-500 mt-4 max-w-2xl mx-auto">Domina las fórmulas necesarias para construir los cuartiles y aprende a leer la "personalidad" de los datos observando la forma de la caja.</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+                    
+                    <!-- Anatomía -->
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm border-t-4 border-t-violet-500 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 group">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-violet-50 text-violet-500 flex items-center justify-center text-2xl group-hover:bg-violet-500 group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-cube"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-800 text-lg">Los 5 Números</h3>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">Un diagrama de caja se construye a partir de 5 valores fundamentales:</p>
+                        <ul class="text-sm text-slate-700 space-y-2 font-medium bg-slate-50 p-4 rounded-xl border border-slate-100 group-hover:border-violet-100 transition-colors">
+                            <li class="flex items-center gap-2"><i class="fas fa-caret-right text-violet-400"></i> $X_{min}$: Valor mínimo (sin atípicos)</li>
+                            <li class="flex items-center gap-2"><i class="fas fa-caret-right text-violet-400"></i> $Q_1$: Cuartil 1 (25%)</li>
+                            <li class="flex items-center gap-2"><i class="fas fa-caret-right text-violet-400"></i> $Q_2$: Cuartil 2 o Mediana (50%)</li>
+                            <li class="flex items-center gap-2"><i class="fas fa-caret-right text-violet-400"></i> $Q_3$: Cuartil 3 (75%)</li>
+                            <li class="flex items-center gap-2"><i class="fas fa-caret-right text-violet-400"></i> $X_{max}$: Valor máximo (sin atípicos)</li>
+                        </ul>
+                    </div>
+
+                    <!-- RIC y Atípicos -->
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm border-t-4 border-t-pink-500 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 group">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-pink-50 text-pink-500 flex items-center justify-center text-2xl group-hover:bg-pink-500 group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-ruler-horizontal"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-800 text-lg">El Rango (RIC) y Atípicos</h3>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">El Rango Intercuartílico mide el ancho de la caja. Los límites definen si un dato es "raro" (outlier).</p>
+                        <div class="space-y-3 bg-pink-50 p-4 rounded-xl border border-pink-100 text-sm group-hover:shadow-inner transition-shadow">
+                            <p class="font-bold text-pink-800 flex items-center gap-2"><i class="fas fa-arrows-left-right text-pink-400"></i> Fórmula RIC:</p>
+                            <p class="text-center font-mono text-lg bg-white rounded-lg shadow-sm py-2 border border-pink-100">$RIC = Q_3 - Q_1$</p>
+                            <p class="font-bold text-pink-800 mt-3 flex items-center gap-2"><i class="fas fa-ban text-pink-400"></i> Límites (Cercos):</p>
+                            <div class="bg-white rounded-lg shadow-sm p-2 border border-pink-100">
+                                <p class="border-b border-pink-50 pb-1 mb-1 text-slate-700">Inf: $L_I = Q_1 - 1.5(RIC)$</p>
+                                <p class="text-slate-700">Sup: $L_S = Q_3 + 1.5(RIC)$</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Datos Agrupados -->
+                    <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm border-t-4 border-t-blue-500 lg:col-span-1 md:col-span-2 hover:-translate-y-2 hover:shadow-xl transition-all duration-300 group">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center text-2xl group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
+                                <i class="fas fa-table-list"></i>
+                            </div>
+                            <h3 class="font-bold text-slate-800 text-lg">Datos Agrupados (Intervalos)</h3>
+                        </div>
+                        <p class="text-sm text-slate-600 mb-4 leading-relaxed">Para tablas con intervalos, primero hallas la posición $\frac{k \cdot n}{4}$ y buscas en la Frec. Acumulada ($F_i$). Luego aplicas:</p>
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 flex flex-col items-center justify-center group-hover:shadow-inner transition-shadow">
+                            <div class="text-xl overflow-x-auto w-full text-center py-3 bg-white rounded-lg shadow-sm border border-blue-100 mb-3">
+                                $$Q_k = L_i + \left( \frac{\frac{k \cdot n}{4} - F_{i-1}}{f_i} \right) \cdot A$$
+                            </div>
+                            <ul class="text-xs text-slate-700 w-full grid grid-cols-1 sm:grid-cols-2 gap-2 font-medium">
+                                <li class="bg-white px-2 py-1 rounded shadow-sm flex gap-2 items-center"><span class="text-blue-500 font-bold">$L_i$</span> Lím. inf de clase</li>
+                                <li class="bg-white px-2 py-1 rounded shadow-sm flex gap-2 items-center"><span class="text-blue-500 font-bold">$F_{i-1}$</span> Frec. acum anterior</li>
+                                <li class="bg-white px-2 py-1 rounded shadow-sm flex gap-2 items-center"><span class="text-blue-500 font-bold">$f_i$</span> Frec. abs de clase</li>
+                                <li class="bg-white px-2 py-1 rounded shadow-sm flex gap-2 items-center"><span class="text-blue-500 font-bold">$A$</span> Amplitud intervalo</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Análisis de Asimetría -->
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-lg relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-violet-100 to-transparent rounded-bl-full -z-10 opacity-50"></div>
+                    <h3 class="text-2xl font-black font-heading text-slate-800 mb-6 flex items-center gap-3">
+                        <i class="fas fa-balance-scale-left text-violet-500"></i> Interpretación Visual: Asimetría
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <!-- Simétrica -->
+                        <div class="bg-slate-50 rounded-2xl p-5 border border-slate-100 text-center hover:shadow-md transition-shadow">
+                            <h4 class="font-bold text-slate-700 mb-2">Simétrica</h4>
+                            <div class="w-full h-12 flex items-center justify-center mb-4 opacity-70">
+                                <div class="w-8 border-b-2 border-slate-800"></div>
+                                <div class="w-16 h-8 border-2 border-slate-800 flex items-center relative">
+                                    <div class="absolute left-1/2 top-0 bottom-0 border-l-2 border-red-500 -ml-[1px]"></div>
+                                </div>
+                                <div class="w-8 border-b-2 border-slate-800"></div>
+                            </div>
+                            <p class="text-sm text-slate-600">La mediana ($Q_2$) está en el centro exacto. Los bigotes miden lo mismo. Distribución equilibrada.</p>
+                        </div>
+                        <!-- Asimetría Positiva -->
+                        <div class="bg-emerald-50 rounded-2xl p-5 border border-emerald-100 text-center hover:shadow-md transition-shadow">
+                            <h4 class="font-bold text-emerald-800 mb-2">Asimetría Positiva (Sesgo Der)</h4>
+                            <div class="w-full h-12 flex items-center justify-center mb-4">
+                                <div class="w-4 border-b-2 border-slate-800"></div>
+                                <div class="w-16 h-8 border-2 border-slate-800 flex items-center relative bg-white">
+                                    <div class="absolute left-1/4 top-0 bottom-0 border-l-2 border-red-500 -ml-[1px]"></div>
+                                </div>
+                                <div class="w-16 border-b-2 border-slate-800"></div>
+                            </div>
+                            <p class="text-sm text-emerald-700 font-medium">La mediana se acerca a $Q_1$. Bigote derecho largo. Significa que la mayoría de los datos son BAJOS, con algunos casos altos.</p>
+                        </div>
+                        <!-- Asimetría Negativa -->
+                        <div class="bg-rose-50 rounded-2xl p-5 border border-rose-100 text-center hover:shadow-md transition-shadow">
+                            <h4 class="font-bold text-rose-800 mb-2">Asimetría Negativa (Sesgo Izq)</h4>
+                            <div class="w-full h-12 flex items-center justify-center mb-4">
+                                <div class="w-16 border-b-2 border-slate-800"></div>
+                                <div class="w-16 h-8 border-2 border-slate-800 flex items-center relative bg-white">
+                                    <div class="absolute right-1/4 top-0 bottom-0 border-l-2 border-red-500 -ml-[1px]"></div>
+                                </div>
+                                <div class="w-4 border-b-2 border-slate-800"></div>
+                            </div>
+                            <p class="text-sm text-rose-700 font-medium">La mediana se desplaza hacia $Q_3$. Bigote izquierdo largo. Significa que la mayoría sacó puntajes ALTOS.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Simulacro Tipo Parcial -->
+        <section class="py-16 bg-white relative border-t border-slate-200">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-100 text-red-500 mb-6 shadow-lg border border-red-200 hover:scale-110 transition-transform cursor-pointer">
+                        <i class="fas fa-stopwatch text-3xl"></i>
+                    </div>
+                    <h2 class="text-3xl md:text-4xl font-heading font-black text-slate-800">Simulacro Tipo Parcial P3</h2>
+                    <p class="text-slate-500 mt-4 text-lg">Preguntas extraídas y adaptadas de escenarios reales de evaluación.</p>
+                </div>
+
+                <!-- Múltiple Choice Section -->
+                <div class="space-y-8 mb-16">
+                    <!-- Q1 -->
+                    <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 shadow-sm transition-all hover:shadow-lg">
+                        <p class="font-bold text-xl text-slate-800 mb-6"><span class="bg-violet-600 text-white w-10 h-10 inline-flex items-center justify-center rounded-full text-lg mr-3 shadow-md">1</span> Un entrenador de baloncesto revisa un diagrama de caja de los puntos del equipo y pregunta: <i>"¿Qué me dice exactamente esta 'caja' en el centro del gráfico?"</i>.</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <button onclick="checkMCQ('bx1', 'A', false, this)" class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">A) Muestra la diferencia entre el partido con más puntos y el de menos puntos.</button>
+                            <button onclick="checkMCQ('bx1', 'B', true, this)"  class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">B) Representa el 50% central de los puntajes del equipo, delimitado por el primer y tercer cuartil.</button>
+                            <button onclick="checkMCQ('bx1', 'C', false, this)" class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">C) Nos indica el promedio exacto de puntos que hizo todo el equipo.</button>
+                            <button onclick="checkMCQ('bx1', 'D', false, this)" class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">D) Contiene a todos los jugadores que anotaron por encima de la media.</button>
+                        </div>
+                        <div id="mcq-bx1-feedback" class="hidden rounded-2xl p-5 text-base font-medium mt-4"></div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="bg-slate-50 rounded-3xl p-8 border border-slate-200 shadow-sm transition-all hover:shadow-lg">
+                        <p class="font-bold text-xl text-slate-800 mb-6"><span class="bg-violet-600 text-white w-10 h-10 inline-flex items-center justify-center rounded-full text-lg mr-3 shadow-md">2</span> Observas un diagrama de caja sobre las notas de matemáticas. Se nota que la mediana ($Q_2$) está muy desplazada hacia el lado derecho, casi pegada a $Q_3$. ¿Qué indica esto sobre las notas del grupo?</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <button onclick="checkMCQ('bx2', 'A', true, this)" class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">A) Que hay una asimetría negativa (sesgo a la izquierda); la mayoría sacó notas altas.</button>
+                            <button onclick="checkMCQ('bx2', 'B', false, this)" class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">B) Que hay una asimetría positiva; la mayoría sacó notas muy bajas.</button>
+                            <button onclick="checkMCQ('bx2', 'C', false, this)" class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">C) Que las notas tienen una distribución perfectamente normal y simétrica en el centro.</button>
+                            <button onclick="checkMCQ('bx2', 'D', false, this)" class="text-left px-6 py-4 rounded-xl border-2 border-slate-200 bg-white hover:border-violet-400 font-medium text-slate-700 transition-all shadow-sm hover:shadow">D) Que la mayoría del grupo reprobó el examen con notas por debajo del promedio.</button>
+                        </div>
+                        <div id="mcq-bx2-feedback" class="hidden rounded-2xl p-5 text-base font-medium mt-4"></div>
+                    </div>
+                </div>
+
+                <!-- Open Ended Section -->
+                <div class="bg-gradient-to-br from-indigo-900 to-slate-900 rounded-3xl p-8 shadow-2xl relative overflow-hidden text-white">
+                    <div class="absolute top-0 right-0 w-48 h-48 bg-indigo-500 rounded-full blur-3xl opacity-20 pointer-events-none"></div>
+                    <h4 class="font-black font-heading text-2xl text-white mb-4"><i class="fas fa-industry text-indigo-400 mr-2"></i> Caso Abierto: Gerente de Compras</h4>
+                    <p class="text-indigo-100 mb-6 text-lg leading-relaxed">Eres el gerente evaluando 3 marcas de baterías según su duración en horas (Marcas A, B, C):<br>
+                    • <strong>Marca A:</strong> Caja pequeña, simétrica, bigotes cortos.<br>
+                    • <strong>Marca B:</strong> Caja muy ancha, simétrica, bigotes larguísimos.<br>
+                    • <strong>Marca C:</strong> Caja mediana, pero presenta dos puntos rojos aislados muy a la izquierda (valores atípicos inferiores).<br><br>
+                    Basado en la <strong>dispersión</strong>, argumenta qué marca elegirías y por qué descartas las otras dos.</p>
+                    
+                    <textarea class="w-full h-32 p-4 border border-indigo-500/50 bg-slate-800/50 rounded-2xl focus:ring-2 focus:ring-indigo-400 outline-none mb-6 text-white placeholder-indigo-300/50 resize-none" placeholder="Escribe tu análisis gerencial aquí..."></textarea>
+                    
+                    <button onclick="toggleRubric('rubric-box')" class="bg-indigo-500 hover:bg-indigo-400 text-white font-bold py-3 px-8 rounded-xl transition-colors shadow-lg shadow-indigo-500/30">
+                        <i class="fas fa-eye mr-2"></i> Revelar Rúbrica de Evaluación
+                    </button>
+                    
+                    <div id="rubric-box" class="solution-content mt-6">
+                        <div class="solution-inner">
+                            <div class="bg-slate-800/80 backdrop-blur-md border border-indigo-400/30 rounded-2xl p-6 text-indigo-50">
+                                <p class="font-black text-indigo-300 mb-3 text-lg"><i class="fas fa-check-circle mr-2"></i> Rúbrica de Corrección (Puntos Extra):</p>
+                                <ul class="list-none space-y-3 text-base">
+                                    <li><i class="fas fa-angle-right text-indigo-400 mr-2"></i><strong>Elección Marca A:</strong> Es la mejor opción porque su caja pequeña y bigotes cortos indican <strong>baja dispersión</strong>, lo que significa que su duración es consistente y predecible.</li>
+                                    <li><i class="fas fa-angle-right text-indigo-400 mr-2"></i><strong>Descarte Marca B:</strong> Su caja y bigotes anchos indican alta variabilidad; no hay garantía de cuánto durarán exactamente.</li>
+                                    <li><i class="fas fa-angle-right text-indigo-400 mr-2"></i><strong>Descarte Marca C:</strong> Aunque su caja es regular, los atípicos inferiores revelan que ocasionalmente producen baterías muy defectuosas (mueren rápido).</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- 4. Entrenamiento Élite -->
+        <section id="elite" class="py-16 bg-slate-50 relative border-t border-slate-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center mb-16">
+                    <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-teal-100 text-teal-600 mb-4 shadow-sm border border-teal-200">
+                        <i class="fas fa-dumbbell text-2xl"></i>
+                    </div>
+                    <h2 class="text-3xl md:text-4xl font-heading font-black text-slate-800">Entrenamiento Élite</h2>
+                    <p class="text-slate-500 mt-4 max-w-2xl mx-auto">Resuelve ejercicios con datos no agrupados y tablas de distribución de frecuencias. Descubre el paso a paso.</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8" id="eliteGridBox">
+                    <!-- Cards generated via JS -->
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 py-10 border-t border-slate-800">
+        <div class="max-w-5xl mx-auto px-4 text-center text-sm">
+            <div class="flex items-center justify-center gap-2 mb-2 text-slate-200 font-heading font-extrabold text-lg">
+                <i class="fas fa-boxes-stacked text-violet-400"></i> Neuro<span class="text-violet-400">Tutor</span>
+            </div>
+            <p>Laboratorio de entrenamiento · Diagrama de caja y bigotes · Estadística descriptiva</p>
+        </div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        /* ==============================
+           DYNAMIC BOXPLOT GENERATOR
+        ============================== */
+        function calculateStats(arr) {
+            arr.sort((a, b) => a - b);
+            let n = arr.length;
+            
+            function getQVal(k) {
+                let exactPos = (k * (n + 1)) / 4;
+                let pos, val;
+                
+                if (exactPos % 1 === 0.5) {
+                    pos = exactPos;
+                    let lower = Math.floor(exactPos) - 1;
+                    let upper = Math.ceil(exactPos) - 1;
+                    val = (arr[lower] + arr[upper]) / 2;
+                } else {
+                    pos = Math.round(exactPos);
+                    let idx = pos - 1;
+                    if (idx < 0) idx = 0;
+                    if (idx >= n) idx = n - 1;
+                    val = arr[idx];
+                }
+                
+                val = Number(val.toFixed(2));
+                
+                return { val, pos, exactPos };
+            }
+
+            const q1Obj = getQVal(1);
+            const q2Obj = getQVal(2);
+            const q3Obj = getQVal(3);
+            
+            const q1 = q1Obj.val;
+            const q2 = q2Obj.val;
+            const q3 = q3Obj.val;
+            
+            const iqr = q3 - q1;
+            const lowerBound = q1 - 1.5 * iqr;
+            const upperBound = q3 + 1.5 * iqr;
+
+            const outliers = arr.filter(x => x < lowerBound || x > upperBound);
+
+            const minWhisker = lowerBound;
+            const maxWhisker = upperBound;
+
+            return {
+                min: arr[0],
+                max: arr[arr.length - 1],
+                q1, q2, q3, iqr, lowerBound, upperBound, outliers, minWhisker, maxWhisker,
+                n,
+                sortedArr: arr,
+                q1Obj, q2Obj, q3Obj
+            };
+        }
+
+        function calculateGroupedStats(text) {
+            let lines = text.split('\n');
+            let data = [];
+            let N = 0;
+            let min = null, max = null;
+            
+            for(let line of lines) {
+                if(!line.trim()) continue;
+                let cleanLine = line.replace(/[\[\]\(\)]/g, '').trim();
+                let nums = cleanLine.match(/\d+\.?\d*/g);
+                if(nums && nums.length >= 3 && parseFloat(nums[1]) > parseFloat(nums[0])) {
+                    let Li = parseFloat(nums[0]);
+                    let Ls = parseFloat(nums[1]);
+                    let f = parseFloat(nums[2]);
+                    if (min === null) min = Li;
+                    max = Ls;
+                    N += f;
+                    data.push({Li, Ls, f, Fa: N, A: Ls - Li});
+                }
+            }
+            
+            if (data.length === 0 || N === 0) return null;
+            
+            function getQ(k) {
+                let pos = k * N / 4;
+                let row = data.find(c => c.Fa >= pos);
+                if(!row) return {val: 0, pos, Li:0, A:0, Fa_ant:0, f:0};
+                let idx = data.indexOf(row);
+                let Fa_ant = idx > 0 ? data[idx-1].Fa : 0;
+                let val = row.Li + ((pos - Fa_ant)/row.f)*row.A;
+                return {val, pos, Li: row.Li, A: row.A, Fa_ant, f: row.f, Ls: row.Ls};
+            }
+            
+            let q1 = getQ(1);
+            let q2 = getQ(2);
+            let q3 = getQ(3);
+            let iqr = q3.val - q1.val;
+            
+            return {
+                min: min,
+                max: max,
+                minWhisker: min, 
+                maxWhisker: max,
+                q1: q1.val,
+                q2: q2.val,
+                q3: q3.val,
+                iqr,
+                lowerBound: min,
+                upperBound: max,
+                outliers: [],
+                n: N,
+                q1Obj: q1,
+                q2Obj: q2,
+                q3Obj: q3,
+                data
+            };
+        }
+
+        function processBoxplot(mode) {
+            if(mode === 'ungrouped') {
+                generateBoxplot();
+            } else if (mode === 'grouped') {
+                generateGroupedBoxplot();
+            } else {
+                generateBoxplot();
+                generateGroupedBoxplot();
+            }
+        }
+
+        function generateBoxplot() {
+            showError('ungrouped');
+            const inputTxt = document.getElementById('data-input').value;
+            const sep = /[;\n]/.test(inputTxt) ? /[;\n]+/ : /,/;
+            const rawArr = inputTxt.split(sep).map(s => parseFloat(s.trim().replace(',', '.'))).filter(n => !isNaN(n));
+            
+            if(rawArr.length < 4) {
+                showError('ungrouped', 'Ingresa al menos 4 números válidos para poder calcular los cuartiles.');
+                return;
+            }
+
+            const stats = calculateStats(rawArr);
+            const fmt = n => Number.isInteger(n) ? n.toString() : Number(n.toFixed(2)).toString();
+            const outliersText = stats.outliers.length > 0 ? stats.outliers.map(n => fmt(n)).join(', ') : 'Ninguno';
+
+            document.getElementById('stats-panel-ungrouped').classList.remove('hidden');
+            document.getElementById('stats-panel-ungrouped').innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <div class="space-y-4">
+                        <h4 class="font-bold text-slate-700 uppercase tracking-wide text-sm flex items-center gap-2">
+                            <i class="fas fa-sort-numeric-down text-violet-500"></i> Datos Ordenados & Atípicos
+                        </h4>
+                        
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <span class="block text-xs font-bold text-slate-500 mb-2 uppercase">Serie Ordenada ($N=${stats.n}$)</span>
+                            <div class="text-slate-700 font-mono text-sm leading-relaxed break-words bg-white p-3 rounded-lg border border-slate-100">
+                                ${stats.sortedArr.map(n => fmt(n)).join(', ')}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-center">
+                                <span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Cercos (Límites de Tolerancia)</span>
+                                <span class="font-mono text-sm font-bold text-slate-800">$L_I$: ${fmt(stats.lowerBound)} | $L_S$: ${fmt(stats.upperBound)}</span>
+                            </div>
+                            <div class="bg-rose-50 p-4 rounded-xl border border-rose-200 text-center">
+                                <span class="block text-[10px] font-bold text-rose-600 uppercase mb-1">Atípicos Detectados</span>
+                                <span class="font-bold text-rose-800 text-sm">${outliersText}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <h4 class="font-bold text-slate-700 uppercase tracking-wide text-sm flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-violet-500"></i> Resumen de los 5 Números
+                        </h4>
+                        
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-200"><span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Mínimo Absoluto</span><span class="font-black text-slate-700 text-lg">${fmt(stats.min)}</span></div>
+                            <div class="bg-violet-50 p-3 rounded-xl text-center border border-violet-200 shadow-sm"><span class="block text-[10px] font-bold text-violet-600 uppercase mb-1">Q1 (25%)</span><span class="font-black text-violet-700 text-lg">${fmt(stats.q1)}</span></div>
+                            <div class="bg-slate-50 p-3 rounded-xl text-center border border-slate-200"><span class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Máximo Absoluto</span><span class="font-black text-slate-700 text-lg">${fmt(stats.max)}</span></div>
+                            
+                            <div class="bg-indigo-50 p-3 rounded-xl text-center border border-indigo-200 shadow-sm"><span class="block text-[10px] font-bold text-indigo-600 uppercase mb-1">Mediana (Q2)</span><span class="font-black text-indigo-700 text-lg">${fmt(stats.q2)}</span></div>
+                            <div class="bg-violet-50 p-3 rounded-xl text-center border border-violet-200 shadow-sm"><span class="block text-[10px] font-bold text-violet-600 uppercase mb-1">Q3 (75%)</span><span class="font-black text-violet-700 text-lg">${fmt(stats.q3)}</span></div>
+                            <div class="bg-pink-50 p-3 rounded-xl text-center border border-pink-200 shadow-sm"><span class="block text-[10px] font-bold text-pink-600 uppercase mb-1">RIC</span><span class="font-black text-pink-700 text-lg">${fmt(stats.iqr)}</span></div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 text-left">
+                            <button onclick="toggleStepByStep('ungrouped')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-list-check text-violet-400"></i> Ver Procedimiento Paso a Paso
+                            </button>
+                            <div id="step-by-step-box-ungrouped" class="hidden mt-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-sm space-y-4">
+                                
+                                <div class="flex gap-3 items-start">
+                                    <span class="flex-shrink-0 w-7 h-7 rounded-full bg-violet-100 text-violet-600 font-bold flex items-center justify-center text-sm shadow-sm border border-violet-200">1</span>
+                                    <div class="w-full">
+                                        <strong class="text-slate-800 block mb-3">Hallar Cuartiles (Posiciones y Valores):</strong>
+                                        <div class="space-y-3 text-slate-700">
+                                            <div class="bg-violet-50 p-3 rounded-xl border border-violet-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                                <div>
+                                                    <span class="block text-[10px] uppercase font-bold text-violet-600 mb-1">Cuartil 1</span>
+                                                    <span class="text-sm font-medium text-slate-600">Posición: $P_1 = \\frac{1(${stats.n}+1)}{4} = ${stats.q1Obj.exactPos}$${stats.q1Obj.exactPos !== stats.q1Obj.pos ? ` <i class="fas fa-arrow-right mx-1 text-slate-400 text-xs"></i> Pos $${stats.q1Obj.pos}$` : ''}</span>
+                                                </div>
+                                                <span class="font-black text-violet-700 text-lg bg-white px-3 py-1 rounded-lg shadow-sm border border-violet-200">$= ${fmt(stats.q1)}$</span>
+                                            </div>
+                                            <div class="bg-indigo-50 p-3 rounded-xl border border-indigo-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                                <div>
+                                                    <span class="block text-[10px] uppercase font-bold text-indigo-600 mb-1">Mediana (Q2)</span>
+                                                    <span class="text-sm font-medium text-slate-600">Posición: $P_2 = \\frac{2(${stats.n}+1)}{4} = ${stats.q2Obj.exactPos}$${stats.q2Obj.exactPos !== stats.q2Obj.pos ? ` <i class="fas fa-arrow-right mx-1 text-slate-400 text-xs"></i> Pos $${stats.q2Obj.pos}$` : ''}</span>
+                                                </div>
+                                                <span class="font-black text-indigo-700 text-lg bg-white px-3 py-1 rounded-lg shadow-sm border border-indigo-200">$= ${fmt(stats.q2)}$</span>
+                                            </div>
+                                            <div class="bg-violet-50 p-3 rounded-xl border border-violet-100 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                                <div>
+                                                    <span class="block text-[10px] uppercase font-bold text-violet-600 mb-1">Cuartil 3</span>
+                                                    <span class="text-sm font-medium text-slate-600">Posición: $P_3 = \\frac{3(${stats.n}+1)}{4} = ${stats.q3Obj.exactPos}$${stats.q3Obj.exactPos !== stats.q3Obj.pos ? ` <i class="fas fa-arrow-right mx-1 text-slate-400 text-xs"></i> Pos $${stats.q3Obj.pos}$` : ''}</span>
+                                                </div>
+                                                <span class="font-black text-violet-700 text-lg bg-white px-3 py-1 rounded-lg shadow-sm border border-violet-200">$= ${fmt(stats.q3)}$</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3 items-start">
+                                    <span class="flex-shrink-0 w-7 h-7 rounded-full bg-violet-100 text-violet-600 font-bold flex items-center justify-center text-sm shadow-sm border border-violet-200">2</span>
+                                    <div class="w-full">
+                                        <strong class="text-slate-800 block mb-2">Calcular Rango Intercuartílico (RIC):</strong>
+                                        <div class="bg-pink-50 px-4 py-3 rounded-xl border border-pink-200 text-pink-800 font-medium text-center shadow-sm flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-4">
+                                            <span>$RIC = Q_3 - Q_1$</span>
+                                            <i class="fas fa-arrow-right hidden sm:block text-pink-300"></i>
+                                            <span>$RIC = ${fmt(stats.q3)} - ${fmt(stats.q1)}$</span>
+                                            <i class="fas fa-arrow-right hidden sm:block text-pink-300"></i>
+                                            <span class="font-black text-pink-600 bg-white px-2 py-0.5 rounded shadow-sm">RIC = ${fmt(stats.iqr)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex gap-3 items-start">
+                                    <span class="flex-shrink-0 w-7 h-7 rounded-full bg-violet-100 text-violet-600 font-bold flex items-center justify-center text-sm shadow-sm border border-violet-200">3</span>
+                                    <div class="w-full">
+                                        <strong class="text-slate-800 block mb-2">Calcular Límites de Tolerancia (Cercos):</strong>
+                                        <div class="space-y-2 text-slate-700">
+                                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                                <span class="text-xs font-bold uppercase text-slate-500"><i class="fas fa-arrow-down mr-1"></i> Límite Inferior ($L_I$)</span>
+                                                <span class="font-medium bg-white px-2 py-1 rounded shadow-sm border border-slate-100">$${fmt(stats.q1)} - 1.5(${fmt(stats.iqr)}) = \\mathbf{${fmt(stats.lowerBound)}}$</span>
+                                            </div>
+                                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                                                <span class="text-xs font-bold uppercase text-slate-500"><i class="fas fa-arrow-up mr-1"></i> Límite Superior ($L_S$)</span>
+                                                <span class="font-medium bg-white px-2 py-1 rounded shadow-sm border border-slate-100">$${fmt(stats.q3)} + 1.5(${fmt(stats.iqr)}) = \\mathbf{${fmt(stats.upperBound)}}$</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-xs text-indigo-700 mt-4 bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 flex gap-3 items-start">
+                                    <i class="fas fa-info-circle mt-0.5 text-indigo-400 text-base"></i> 
+                                    <span><strong>Nota Gráfica:</strong> Los bigotes se han extendido intencionalmente hasta $L_I$ y $L_S$. Todo dato evaluado que quede por fuera de estos límites se clasifica estadísticamente como un valor atípico (representado con puntos rojos).</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            drawSvgBoxplot(stats, 'svg-container-ungrouped', 'ungrouped');
+            typeset(document.getElementById('stats-panel-ungrouped'));
+        }
+
+        function generateGroupedBoxplot() {
+            showError('grouped');
+            const inputTxt = document.getElementById('data-grouped-input').value;
+            const stats = calculateGroupedStats(inputTxt);
+
+            if(!stats || stats.data.length === 0) {
+                showError('grouped', 'Usa el formato LímiteInf - LímiteSup, Frecuencia (una clase por línea) y verifica que el límite superior sea mayor que el inferior.');
+                return;
+            }
+            
+            const fmt = n => Number.isInteger(n) ? n.toString() : Number(n.toFixed(2)).toString();
+
+            let tableHTML = `
+                <div class="overflow-x-auto w-full mb-2 rounded-xl border border-slate-200">
+                    <table class="w-full text-sm text-center border-collapse bg-white">
+                        <thead class="bg-blue-50 text-blue-800 border-b border-slate-200">
+                            <tr><th class="p-3">Intervalo</th><th class="p-3 border-l border-slate-200">$f_i$</th><th class="p-3 border-l border-slate-200">$F_a$</th></tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${stats.data.map(r => `<tr><td class="p-3 font-medium text-slate-700">[${r.Li} - ${r.Ls})</td><td class="p-3 border-l border-slate-100">${r.f}</td><td class="p-3 border-l border-slate-100 font-bold text-indigo-600">${r.Fa}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            document.getElementById('stats-panel-grouped').classList.remove('hidden');
+            document.getElementById('stats-panel-grouped').innerHTML = `
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 bg-white p-6 rounded-2xl shadow-sm border border-blue-100">
+                    <div class="space-y-4">
+                        <h4 class="font-bold text-slate-700 uppercase tracking-wide text-sm flex items-center gap-2">
+                            <i class="fas fa-table-cells text-blue-500"></i> Tabla de Distribución
+                        </h4>
+                        ${tableHTML}
+                        <div class="bg-slate-50 p-4 rounded-xl flex justify-between items-center border border-slate-200">
+                            <span class="font-bold text-slate-600 text-sm">Muestra Total</span>
+                            <span class="font-black text-blue-600 text-xl">$N = ${stats.n}$</span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <h4 class="font-bold text-slate-700 uppercase tracking-wide text-sm flex items-center gap-2">
+                            <i class="fas fa-chart-pie text-violet-500"></i> Resumen de Cuartiles
+                        </h4>
+                        
+                        <div class="grid grid-cols-3 gap-3">
+                            <div class="bg-blue-50/50 p-3 rounded-xl text-center border border-blue-100"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Mínimo ($L_I$)</span><span class="font-black text-slate-700 text-lg">${fmt(stats.min)}</span></div>
+                            <div class="bg-violet-50 p-3 rounded-xl text-center border border-violet-200 shadow-sm"><span class="block text-[10px] font-bold text-violet-600 uppercase mb-1">Q1 (25%)</span><span class="font-black text-violet-700 text-lg">${fmt(stats.q1)}</span></div>
+                            <div class="bg-blue-50/50 p-3 rounded-xl text-center border border-blue-100"><span class="block text-[10px] font-bold text-blue-500 uppercase mb-1">Máximo ($L_S$)</span><span class="font-black text-slate-700 text-lg">${fmt(stats.max)}</span></div>
+                            
+                            <div class="bg-indigo-50 p-3 rounded-xl text-center border border-indigo-200 shadow-sm"><span class="block text-[10px] font-bold text-indigo-600 uppercase mb-1">Mediana (Q2)</span><span class="font-black text-indigo-700 text-lg">${fmt(stats.q2)}</span></div>
+                            <div class="bg-violet-50 p-3 rounded-xl text-center border border-violet-200 shadow-sm"><span class="block text-[10px] font-bold text-violet-600 uppercase mb-1">Q3 (75%)</span><span class="font-black text-violet-700 text-lg">${fmt(stats.q3)}</span></div>
+                            <div class="bg-pink-50 p-3 rounded-xl text-center border border-pink-200 shadow-sm"><span class="block text-[10px] font-bold text-pink-600 uppercase mb-1">RIC</span><span class="font-black text-pink-700 text-lg">${fmt(stats.iqr)}</span></div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 text-left">
+                            <button onclick="toggleStepByStep('grouped')" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg text-sm flex items-center justify-center gap-2">
+                                <i class="fas fa-list-check text-blue-400"></i> Ver Procedimiento de Fórmulas
+                            </button>
+                            <div id="step-by-step-box-grouped" class="hidden mt-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm text-sm space-y-5">
+                                
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <strong class="text-indigo-800 block mb-3 text-center border-b border-slate-200 pb-2">Cálculo de Cuartiles (Interpolación)</strong>
+                                    
+                                    <div class="space-y-4">
+                                        <!-- Q1 -->
+                                        <div>
+                                            <span class="text-xs font-bold text-violet-600 uppercase">Cuartil 1:</span>
+                                            <p class="text-slate-600 mt-1">Posición = $1(${stats.n})/4 = ${stats.q1Obj.pos}$</p>
+                                            <p class="text-slate-600">Intervalo = $[${stats.q1Obj.Li} - ${stats.q1Obj.Ls})$</p>
+                                            <div class="overflow-x-auto my-2">
+                                                $$Q_1 = ${stats.q1Obj.Li} + \\left(\\frac{${stats.q1Obj.pos} - ${stats.q1Obj.Fa_ant}}{${stats.q1Obj.f}}\\right) \\cdot ${stats.q1Obj.A} = \\mathbf{${fmt(stats.q1)}}$$
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Q2 -->
+                                        <div class="pt-4 border-t border-slate-200">
+                                            <span class="text-xs font-bold text-indigo-600 uppercase">Mediana (Q2):</span>
+                                            <p class="text-slate-600 mt-1">Posición = $2(${stats.n})/4 = ${stats.q2Obj.pos}$</p>
+                                            <p class="text-slate-600">Intervalo = $[${stats.q2Obj.Li} - ${stats.q2Obj.Ls})$</p>
+                                            <div class="overflow-x-auto my-2">
+                                                $$Q_2 = ${stats.q2Obj.Li} + \\left(\\frac{${stats.q2Obj.pos} - ${stats.q2Obj.Fa_ant}}{${stats.q2Obj.f}}\\right) \\cdot ${stats.q2Obj.A} = \\mathbf{${fmt(stats.q2)}}$$
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Q3 -->
+                                        <div class="pt-4 border-t border-slate-200">
+                                            <span class="text-xs font-bold text-violet-600 uppercase">Cuartil 3:</span>
+                                            <p class="text-slate-600 mt-1">Posición = $3(${stats.n})/4 = ${stats.q3Obj.pos}$</p>
+                                            <p class="text-slate-600">Intervalo = $[${stats.q3Obj.Li} - ${stats.q3Obj.Ls})$</p>
+                                            <div class="overflow-x-auto my-2">
+                                                $$Q_3 = ${stats.q3Obj.Li} + \\left(\\frac{${stats.q3Obj.pos} - ${stats.q3Obj.Fa_ant}}{${stats.q3Obj.f}}\\right) \\cdot ${stats.q3Obj.A} = \\mathbf{${fmt(stats.q3)}}$$
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-xs text-blue-700 mt-2 bg-blue-50/50 p-3 rounded-xl border border-blue-100 flex gap-3 items-start">
+                                    <i class="fas fa-info-circle mt-0.5 text-blue-400 text-base"></i> 
+                                    <span><strong>Nota Gráfica:</strong> En tablas de datos agrupados, los bigotes suelen trazarse desde el límite inferior de la primera clase hasta el límite superior de la última, asumiendo una distribución continua sin outliers explícitos.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            drawSvgBoxplot(stats, 'svg-container-grouped', 'grouped');
+            typeset(document.getElementById('stats-panel-grouped'));
+        }
+
+        function toggleStepByStep(type) {
+            const box = document.getElementById(`step-by-step-box-${type}`);
+            if(box.classList.contains('hidden')) {
+                box.classList.remove('hidden');
+                typeset(box);
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        function niceTicks(min, max, count = 6) {
+            let span = max - min;
+            if (span <= 0) span = Math.abs(max) || 1;
+            const raw = span / count;
+            const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+            const norm = raw / mag;
+            const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+            const start = Math.floor(min / step + 1e-9) * step;
+            const end = Math.ceil(max / step - 1e-9) * step;
+            const ticks = [];
+            for (let v = start; v <= end + step / 2; v += step) ticks.push(Number(v.toFixed(10)));
+            return { ticks, min: ticks[0], max: ticks[ticks.length - 1] };
+        }
+
+        function drawSvgBoxplot(stats, containerId, variant) {
+            const container = document.getElementById(containerId);
+            const isGrouped = variant === 'grouped';
+            const C = isGrouped
+                ? { g1: '#93c5fd', g2: '#3b82f6', stroke: '#1d4ed8', tagBg: '#dbeafe', tagFg: '#1e3a8a' }
+                : { g1: '#c4b5fd', g2: '#8b5cf6', stroke: '#6d28d9', tagBg: '#ede9fe', tagFg: '#4c1d95' };
+            const uid = containerId.replace(/[^a-z0-9]/gi, '');
+            const f = v => Number.isInteger(v) ? String(v) : String(Number(v.toFixed(2)));
+
+            const w = 640, h = 272, padX = 52;
+            const axisY = 236, cy = 112, bh = 64;
+
+            const lo = Math.min(stats.min, stats.minWhisker);
+            const hi = Math.max(stats.max, stats.maxWhisker);
+            const sc = niceTicks(lo, hi, 6);
+            const mapX = v => padX + ((v - sc.min) / (sc.max - sc.min)) * (w - 2 * padX);
+
+            const x1 = mapX(stats.minWhisker);
+            const x3 = mapX(stats.q1);
+            const xm = mapX(stats.q2);
+            const x4 = mapX(stats.q3);
+            const x5 = mapX(stats.maxWhisker);
+            const boxX = Math.min(x3, x4);
+            const boxW = Math.max(Math.abs(x4 - x3), 3);
+
+            const tag = (x, y, txt, bg, fg) => {
+                const tw = Math.max(40, txt.length * 7 + 18);
+                const cx = Math.min(Math.max(x, tw / 2 + 4), w - tw / 2 - 4);
+                return `<g><rect x="${cx - tw / 2}" y="${y - 12}" width="${tw}" height="24" rx="12" fill="${bg}"/>` +
+                       `<text x="${cx}" y="${y + 4}" text-anchor="middle" font-size="12.5" font-weight="800" fill="${fg}">${txt}</text></g>`;
+            };
+
+            const gap = x4 - x3;
+            const nudge = gap < 84 ? (84 - gap) / 2 : 0;
+
+            let s = `<svg viewBox="0 0 ${w} ${h}" class="w-full h-auto font-sans" role="img" xmlns="http://www.w3.org/2000/svg" ` +
+                    `aria-label="Diagrama de caja y bigotes. Q1 ${f(stats.q1)}, mediana ${f(stats.q2)}, Q3 ${f(stats.q3)}">`;
+
+            s += `<defs>
+                <linearGradient id="${uid}-box" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="${C.g1}"/>
+                    <stop offset="100%" stop-color="${C.g2}"/>
+                </linearGradient>
+                <filter id="${uid}-sh" x="-10%" y="-20%" width="120%" height="150%">
+                    <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#475569" flood-opacity="0.22"/>
+                </filter>
+                <filter id="${uid}-osh" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#ef4444" flood-opacity="0.45"/>
+                </filter>
+            </defs>`;
+
+            s += `<rect x="0" y="0" width="${w}" height="${h}" rx="16" fill="#f8fafc"/>`;
+
+            sc.ticks.forEach(t => {
+                const x = mapX(t);
+                s += `<line x1="${x}" y1="22" x2="${x}" y2="${axisY}" stroke="#e2e8f0" stroke-width="1"/>`;
+                s += `<line x1="${x}" y1="${axisY}" x2="${x}" y2="${axisY + 6}" stroke="#94a3b8" stroke-width="2"/>`;
+                s += `<text x="${x}" y="${axisY + 22}" text-anchor="middle" font-size="12" font-weight="700" fill="#64748b">${f(t)}</text>`;
+            });
+            s += `<line x1="${padX}" y1="${axisY}" x2="${w - padX}" y2="${axisY}" stroke="#64748b" stroke-width="2.5" stroke-linecap="round"/>`;
+            s += `<line x1="${padX}" y1="${cy}" x2="${w - padX}" y2="${cy}" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3 6"/>`;
+
+            s += `<g stroke="#334155" stroke-width="2.8" stroke-linecap="round">
+                <line x1="${x1}" y1="${cy}" x2="${boxX}" y2="${cy}"/>
+                <line x1="${x1}" y1="${cy - 17}" x2="${x1}" y2="${cy + 17}" stroke-width="3.8"/>
+                <line x1="${boxX + boxW}" y1="${cy}" x2="${x5}" y2="${cy}"/>
+                <line x1="${x5}" y1="${cy - 17}" x2="${x5}" y2="${cy + 17}" stroke-width="3.8"/>
+            </g>`;
+
+            s += `<text x="${x1}" y="${cy - bh / 2 - 8}" text-anchor="middle" font-size="12" font-weight="800" fill="#475569">${f(stats.minWhisker)}</text>`;
+            s += `<text x="${x5}" y="${cy - bh / 2 - 8}" text-anchor="middle" font-size="12" font-weight="800" fill="#475569">${f(stats.maxWhisker)}</text>`;
+
+            s += `<rect class="bp-anim" x="${boxX}" y="${cy - bh / 2}" width="${boxW}" height="${bh}" rx="8" fill="url(#${uid}-box)" stroke="${C.stroke}" stroke-width="2.5" filter="url(#${uid}-sh)"/>`;
+
+            s += `<line class="bp-pop" x1="${xm}" y1="${cy - bh / 2}" x2="${xm}" y2="${cy + bh / 2}" stroke="#713f12" stroke-width="7" stroke-linecap="round"/>`;
+            s += `<line class="bp-pop" x1="${xm}" y1="${cy - bh / 2 + 1}" x2="${xm}" y2="${cy + bh / 2 - 1}" stroke="#fde047" stroke-width="4" stroke-linecap="round"/>`;
+
+            (stats.outliers || []).forEach(v => {
+                const ox = mapX(v);
+                s += `<circle class="bp-pop" cx="${ox}" cy="${cy}" r="6.5" fill="#ef4444" stroke="#fff" stroke-width="2" filter="url(#${uid}-osh)"/>`;
+                s += `<text x="${ox}" y="${cy - 14}" text-anchor="middle" font-size="11.5" font-weight="800" fill="#dc2626">${f(v)}</text>`;
+            });
+
+            s += tag(xm, cy - bh / 2 - 34, `Q2 = ${f(stats.q2)}`, '#fef3c7', '#92400e');
+            s += tag(x3 - nudge, cy + bh / 2 + 24, `Q1 = ${f(stats.q1)}`, C.tagBg, C.tagFg);
+            s += tag(x4 + nudge, cy + bh / 2 + 24, `Q3 = ${f(stats.q3)}`, C.tagBg, C.tagFg);
+
+            const ry = cy + bh / 2 + 58;
+            s += `<g stroke="#db2777" stroke-width="2" stroke-linecap="round">
+                <line x1="${boxX}" y1="${ry}" x2="${boxX + boxW}" y2="${ry}"/>
+                <line x1="${boxX}" y1="${ry - 5}" x2="${boxX}" y2="${ry + 5}"/>
+                <line x1="${boxX + boxW}" y1="${ry - 5}" x2="${boxX + boxW}" y2="${ry + 5}"/>
+            </g>`;
+            s += `<text x="${boxX + boxW / 2}" y="${ry + 17}" text-anchor="middle" font-size="12" font-weight="800" fill="#be185d">RIC = ${f(stats.iqr)}</text>`;
+
+            s += `</svg>`;
+            container.innerHTML = s;
+        }
+
+        /* ==============================
+           UTILIDADES (MathJax, errores)
+        ============================== */
+        function typeset(root) {
+            if (window.MathJax && typeof MathJax.typesetPromise === 'function' && MathJax.startup && MathJax.startup.promise) {
+                MathJax.startup.promise = MathJax.startup.promise
+                    .then(() => MathJax.typesetPromise(root ? [root] : undefined))
+                    .catch(err => console.warn('MathJax:', err));
+            } else {
+                window.pendingTypeset = true;
+            }
+        }
+
+        function showError(mode, msg) {
+            const el = document.getElementById('err-' + mode);
+            if (!el) return;
+            if (msg) {
+                el.textContent = msg;
+                el.classList.remove('hidden');
+            } else {
+                el.textContent = '';
+                el.classList.add('hidden');
+            }
+        }
+
+        /* ==============================
+           ELITE EXERCISES
+        ============================== */
+        const eliteExBox = [
+            {
+                id: 1, tag: "Mediana Datos Sueltos", icon: "fa-list-ol text-cyan-500 bg-cyan-100", title: "1. Edades de Teatro",
+                problem: "Las edades de un grupo de teatro son: 14, 13, 16, 12, 16, 13, 15. ¿Cuál es el valor de la mediana (Q2)?",
+                steps: [
+                    "Paso 1: Ordenar los datos de menor a mayor: 12, 13, 13, 14, 15, 16, 16.",
+                    "Paso 2: Contar los datos. N = 7 (impar).",
+                    "Paso 3: La posición de la mediana es (N + 1) / 2 = 8 / 2 = 4.",
+                    "Paso 4: El dato ubicado en la posición 4 es el 14."
+                ],
+                op: "Posición 4", ans: "Mediana = 14", theme: "cyan"
+            },
+            {
+                id: 2, tag: "Cuartiles Sueltos", icon: "fa-running text-emerald-500 bg-emerald-100", title: "2. Tiempos de Corredores",
+                problem: "Los tiempos de 7 corredores fueron: 10, 21, 14, 15, 17, 11, 19. Hallar Q1 y Q3.",
+                steps: [
+                    "Ordenar: 10, 11, 14, 15, 17, 19, 21. (N=7)",
+                    "La mediana (Q2) es 15 (posición 4). Dividimos en dos mitades.",
+                    "Mitad inferior: 10, 11, 14. La mediana de esta mitad es Q1 = 11.",
+                    "Mitad superior: 17, 19, 21. La mediana de esta mitad es Q3 = 19."
+                ],
+                op: "Cortar a la mitad", ans: "Q1=11, Q3=19", theme: "emerald"
+            },
+            {
+                id: 3, tag: "Maestro Datos Agrupados", icon: "fa-table text-indigo-500 bg-indigo-100", title: "3. Análisis Completo de Intervalos",
+                problem: `Se encuestó a 50 estudiantes sobre la cantidad de horas semanales en Internet. Calcula <strong>Q1, Q2 (Mediana) y Q3</strong> a partir de la tabla:
+                <div class="overflow-x-auto mt-4 mb-3">
+                    <table class="min-w-full bg-white border border-indigo-200 rounded-lg overflow-hidden shadow-sm text-xs text-center">
+                        <thead class="bg-indigo-100 text-indigo-800">
+                            <tr>
+                                <th class="py-2 px-2 border-b border-indigo-200 font-bold">Intervalo (Horas)</th>
+                                <th class="py-2 px-2 border-b border-indigo-200 font-bold">Frec. Absoluta ($f_i$)</th>
+                                <th class="py-2 px-2 border-b border-indigo-200 font-bold">Frec. Acumulada ($F_a$)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-700">
+                            <tr><td class="py-1.5 border-b border-slate-100">[10-20)</td><td class="py-1.5 border-b border-slate-100">5</td><td class="py-1.5 border-b border-slate-100 font-bold text-indigo-600">5</td></tr>
+                            <tr class="bg-indigo-50/30"><td class="py-1.5 border-b border-slate-100">[20-30)</td><td class="py-1.5 border-b border-slate-100">12</td><td class="py-1.5 border-b border-slate-100 font-bold text-indigo-600">17 (Q1)</td></tr>
+                            <tr><td class="py-1.5 border-b border-slate-100">[30-40)</td><td class="py-1.5 border-b border-slate-100">18</td><td class="py-1.5 border-b border-slate-100 font-bold text-indigo-600">35 (Q2)</td></tr>
+                            <tr class="bg-indigo-50/30"><td class="py-1.5 border-b border-slate-100">[40-50)</td><td class="py-1.5 border-b border-slate-100">10</td><td class="py-1.5 border-b border-slate-100 font-bold text-indigo-600">45 (Q3)</td></tr>
+                            <tr><td class="py-1.5 border-b border-slate-100">[50-60]</td><td class="py-1.5 border-b border-slate-100">5</td><td class="py-1.5 border-b border-slate-100 font-bold text-indigo-600">50</td></tr>
+                        </tbody>
+                    </table>
+                </div>`,
+                steps: [
+                    "<strong>Cuartil 1:</strong> Posición = $1(50)/4 = 12.5$. Cae en $F_a=17$, clase [20-30).<br>$Q_1 = 20 + \\left(\\frac{12.5 - 5}{12}\\right) \\cdot 10 = 20 + 6.25 = 26.25$",
+                    "<strong>Mediana (Q2):</strong> Posición = $2(50)/4 = 25$. Cae en $F_a=35$, clase [30-40).<br>$Q_2 = 30 + \\left(\\frac{25 - 17}{18}\\right) \\cdot 10 = 30 + 4.44 = 34.44$",
+                    "<strong>Cuartil 3:</strong> Posición = $3(50)/4 = 37.5$. Cae en $F_a=45$, clase [40-50).<br>$Q_3 = 40 + \\left(\\frac{37.5 - 35}{10}\\right) \\cdot 10 = 40 + 2.5 = 42.5$"
+                ],
+                op: "Aplicar Interpolación", ans: "Resumen Listo", theme: "indigo"
+            },
+            {
+                id: 4, tag: "Análisis Completo", icon: "fa-graduation-cap text-purple-500 bg-purple-100", title: "4. Resumen y Atípicos (Examen)",
+                problem: "Notas de 11 estudiantes: 3.9, 4.1, 4.0, 2.5, 3.8, 4.2, 5.0, 0.5, 3.7, 4.0, 4.8. Halla los cuartiles y detecta los atípicos.",
+                steps: [
+                    "Orden: 0.5, 2.5, 3.7, 3.8, 3.9, 4.0, 4.0, 4.1, 4.2, 4.8, 5.0",
+                    "$Q_2$ (centro pos 6) = 4.0. $Q_1$ (centro inf pos 3) = 3.7. $Q_3$ (centro sup pos 9) = 4.2.",
+                    "Cálculo de RIC: $4.2 - 3.7 = 0.5$",
+                    "Límite Inf = $3.7 - 1.5(0.5) = 2.95$. Atípicos: 0.5 y 2.5.",
+                    "Límite Sup = $4.2 + 1.5(0.5) = 4.95$. Atípico: 5.0."
+                ],
+                op: "L_I=2.95, L_S=4.95", ans: "3 Atípicos Detectados", theme: "purple"
+            },
+            {
+                id: 5, tag: "Teoría RIC", icon: "fa-ruler text-rose-500 bg-rose-100", title: "5. Significado del RIC",
+                problem: "Si conocemos que Q1 es 20 y Q3 es 45, ¿cuál es el Rango Intercuartílico (RIC) y qué porcentaje de los datos representa?",
+                steps: [
+                    "El RIC es la diferencia exacta entre el tercer y primer cuartil: $RIC = Q_3 - Q_1$.",
+                    "Cálculo: $RIC = 45 - 20 = 25$.",
+                    "Geométricamente, el RIC determina el ancho exacto de la 'caja'.",
+                    "Por regla universal, la caja siempre agrupa los datos entre el percentil 25 y el percentil 75, englobando al 50% central."
+                ],
+                op: "$45 - 20 = 25$", ans: "50% central", theme: "rose"
+            },
+            {
+                id: 6, tag: "Análisis Visual", icon: "fa-lightbulb text-amber-500 bg-amber-100", title: "6. Lotes de Bombillos",
+                problem: "Una fábrica prueba dos lotes de bombillos. El diagrama muestra que el Lote B tiene una caja (RIC) mucho más ancha que el Lote A. ¿Qué significa argumentativamente esto?",
+                steps: [
+                    "La 'caja' representa el 50% central de la duración de los bombillos.",
+                    "Una caja más ancha significa que el Rango Intercuartílico (distancia de Q1 a Q3) es mayor.",
+                    "Un RIC mayor es el indicador principal de que existe **mayor dispersión** o variabilidad en los datos centrales.",
+                    "Conclusión: Las duraciones del Lote B son menos consistentes (menos predecibles)."
+                ],
+                op: "Caja ancha = Mayor RIC", ans: "Mayor dispersión", theme: "amber"
+            },
+            {
+                id: 7, tag: "Interpretación Bigotes", icon: "fa-cloud-sun text-sky-500 bg-sky-100", title: "7. Asimetría Climática",
+                problem: "Un climatólogo nota que el 'bigote' inferior de un diagrama de temperaturas es exageradamente largo (llega a valores muy negativos). ¿Qué se infiere sobre los datos de ese bigote?",
+                steps: [
+                    "El bigote inferior siempre encierra el 25% más bajo de todos los datos registrados.",
+                    "Un bigote largo NO significa 'más cantidad de días', sino que la misma cantidad de datos (25%) está esparcida a lo largo de muchos grados de temperatura.",
+                    "Por lo tanto, existe una alta variabilidad y poca concentración en los días más fríos."
+                ],
+                op: "Bigote largo = Separación", ans: "25% inferior muy disperso", theme: "sky"
+            },
+            {
+                id: 8, tag: "Concepto Atípico", icon: "fa-user-tag text-red-500 bg-red-100", title: "8. El Estudiante Derrochador",
+                problem: "En una encuesta, casi todos gastan \\$3.000 diarios, pero un estudiante reportó gastar \\$35.000. Al graficar el Boxplot, ¿cómo se representa a este estudiante?",
+                steps: [
+                    "Un valor como \\$35.000 está absurdamente alejado del resto del grupo (la caja).",
+                    "Matemáticamente, con seguridad superará el Límite Superior ($L_S = Q_3 + 1.5 \\times RIC$).",
+                    "En el diagrama, se graficará como un **punto o asterisco aislado** flotando muy por encima del bigote superior.",
+                    "A estos valores que rompen los límites de tolerancia se les llama **Valores Atípicos (Outliers)**."
+                ],
+                op: "Dato > Límite Superior", ans: "Punto aislado (Outlier)", theme: "red"
+            },
+            {
+                id: 9, tag: "Acumulados", icon: "fa-globe text-blue-500 bg-blue-100", title: "9. Navegación en Internet",
+                problem: `Basado en la misma tabla del Ejercicio 3, descubres que el Cuartil 3 ($Q_3$) equivale exactamente a 42.5 horas. ¿Cómo se interpreta este número en el contexto del problema?`,
+                steps: [
+                    "Por definición, el Cuartil 3 (o percentil 75) es el valor que divide los datos dejando el 75% por debajo y el 25% por encima.",
+                    "Si $Q_3 = 42.5$, significa que el **75% de los estudiantes** encuestados navega en internet **42.5 horas o menos** a la semana.",
+                    "También es válido decir que solo el 25% superior navega más de 42.5 horas."
+                ],
+                op: "$Q_3 \\to 75\\% \\text{ Acumulado}$", ans: "75% navega 42,5h o menos", theme: "blue"
+            },
+            {
+                id: 10, tag: "Comparación Grupos", icon: "fa-users text-fuchsia-500 bg-fuchsia-100", title: "10. Estaturas 9A vs 9B",
+                problem: "La Mediana ($Q_2$) del grupo 9A coincide exactamente en la gráfica (160 cm) con el Cuartil 3 ($Q_3$) del grupo 9B. ¿Qué conclusión puede argumentarse con certeza?",
+                steps: [
+                    "Para 9A: Si la Mediana es 160 cm, la mitad (50%) del grupo mide 160 cm o MÁS.",
+                    "Para 9B: Si el $Q_3$ es 160 cm, el 75% del grupo mide 160 cm o MENOS.",
+                    "Uniendo las premisas: Hay al menos un **50% del grupo 9A** que es **igual o más alto** que el **75% del grupo 9B**."
+                ],
+                op: "$Q_2(A) \\ge Q_3(B)$", ans: "50% de A $\\ge$ 75% de B", theme: "fuchsia"
+            },
+            {
+                id: 11, tag: "Mediana Agrupados", icon: "fa-money-bill-wave text-teal-500 bg-teal-100", title: "11. Salarios de Empleados",
+                problem: `Calcula la <strong>Mediana (Q2)</strong> del salario mensual de 100 empleados:
+                <div class="overflow-x-auto mt-4 mb-3">
+                    <table class="min-w-full bg-white border border-teal-200 rounded-lg overflow-hidden shadow-sm text-xs text-center">
+                        <thead class="bg-teal-100 text-teal-800">
+                            <tr>
+                                <th class="py-2 px-2 border-b border-teal-200 font-bold">Salario (\\$)</th>
+                                <th class="py-2 px-2 border-b border-teal-200 font-bold">$f_i$</th>
+                                <th class="py-2 px-2 border-b border-teal-200 font-bold">$F_a$</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-700">
+                            <tr><td class="py-1.5 border-b border-slate-100">[1000-1500)</td><td class="py-1.5 border-b border-slate-100">10</td><td class="py-1.5 border-b border-slate-100 font-bold text-teal-600">10</td></tr>
+                            <tr class="bg-teal-50/30"><td class="py-1.5 border-b border-slate-100">[1500-2000)</td><td class="py-1.5 border-b border-slate-100">25</td><td class="py-1.5 border-b border-slate-100 font-bold text-teal-600">35</td></tr>
+                            <tr><td class="py-1.5 border-b border-slate-100">[2000-2500)</td><td class="py-1.5 border-b border-slate-100">30</td><td class="py-1.5 border-b border-slate-100 font-bold text-teal-600">65 (Q2)</td></tr>
+                            <tr class="bg-teal-50/30"><td class="py-1.5 border-b border-slate-100">[2500-3000)</td><td class="py-1.5 border-b border-slate-100">20</td><td class="py-1.5 border-b border-slate-100 font-bold text-teal-600">85</td></tr>
+                            <tr><td class="py-1.5 border-b border-slate-100">[3000-3500]</td><td class="py-1.5 border-b border-slate-100">15</td><td class="py-1.5 border-b border-slate-100 font-bold text-teal-600">100</td></tr>
+                        </tbody>
+                    </table>
+                </div>`,
+                steps: [
+                    "<strong>Paso 1:</strong> Hallar la posición de la Mediana: $P_2 = \\frac{2(100)}{4} = 50$.",
+                    "<strong>Paso 2:</strong> Buscar el 50 en la columna $F_a$. La primera clase que lo contiene o supera es [2000-2500) con $F_a = 65$.",
+                    "<strong>Paso 3:</strong> Extraer datos de la fórmula: Límite Inferior $L_i = 2000$, $F_{a-1} = 35$, $f_i = 30$, Amplitud $A = 500$.",
+                    "<strong>Paso 4:</strong> Calcular: $Q_2 = 2000 + \\left(\\frac{50 - 35}{30}\\right) \\cdot 500 = 2000 + \\left(\\frac{15}{30}\\right) \\cdot 500 = 2000 + 250$."
+                ],
+                op: "Interpolación Mediana", ans: "\\$2250", theme: "teal"
+            },
+            {
+                id: 12, tag: "Q1, Q3 y RIC Agrupados", icon: "fa-car text-orange-500 bg-orange-100", title: "12. Tiempos de Viaje",
+                problem: `Halla el <strong>Rango Intercuartílico (RIC)</strong> del tiempo de viaje (en minutos) de 100 personas:
+                <div class="overflow-x-auto mt-4 mb-3">
+                    <table class="min-w-full bg-white border border-orange-200 rounded-lg overflow-hidden shadow-sm text-xs text-center">
+                        <thead class="bg-orange-100 text-orange-800">
+                            <tr>
+                                <th class="py-2 px-2 border-b border-orange-200 font-bold">Tiempo (min)</th>
+                                <th class="py-2 px-2 border-b border-orange-200 font-bold">$f_i$</th>
+                                <th class="py-2 px-2 border-b border-orange-200 font-bold">$F_a$</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-slate-700">
+                            <tr><td class="py-1.5 border-b border-slate-100">[10-20)</td><td class="py-1.5 border-b border-slate-100">12</td><td class="py-1.5 border-b border-slate-100 font-bold text-orange-600">12</td></tr>
+                            <tr class="bg-orange-50/30"><td class="py-1.5 border-b border-slate-100">[20-30)</td><td class="py-1.5 border-b border-slate-100">28</td><td class="py-1.5 border-b border-slate-100 font-bold text-orange-600">40 (Q1)</td></tr>
+                            <tr><td class="py-1.5 border-b border-slate-100">[30-40)</td><td class="py-1.5 border-b border-slate-100">30</td><td class="py-1.5 border-b border-slate-100 font-bold text-orange-600">70</td></tr>
+                            <tr class="bg-orange-50/30"><td class="py-1.5 border-b border-slate-100">[40-50)</td><td class="py-1.5 border-b border-slate-100">20</td><td class="py-1.5 border-b border-slate-100 font-bold text-orange-600">90 (Q3)</td></tr>
+                            <tr><td class="py-1.5 border-b border-slate-100">[50-60]</td><td class="py-1.5 border-b border-slate-100">10</td><td class="py-1.5 border-b border-slate-100 font-bold text-orange-600">100</td></tr>
+                        </tbody>
+                    </table>
+                </div>`,
+                steps: [
+                    "<strong>Cuartil 1:</strong> Posición $\\frac{1(100)}{4} = 25$. Clase [20-30). <br>$Q_1 = 20 + \\left(\\frac{25 - 12}{28}\\right) \\cdot 10 = 20 + (13/28)\\cdot 10 = 24.64$",
+                    "<strong>Cuartil 3:</strong> Posición $\\frac{3(100)}{4} = 75$. Clase [40-50). <br>$Q_3 = 40 + \\left(\\frac{75 - 70}{20}\\right) \\cdot 10 = 40 + (5/20)\\cdot 10 = 42.50$",
+                    "<strong>Cálculo del RIC:</strong> Restamos el valor exacto del Tercer Cuartil menos el Primer Cuartil: <br>$RIC = Q_3 - Q_1 = 42.50 - 24.64 = 17.86$"
+                ],
+                op: "$RIC = Q_3 - Q_1$", ans: "17.86 min", theme: "orange"
+            }
+        ];
+
+        const THEMES = {
+            cyan:    ['#ecfeff', '#cffafe', '#a5f3fc', '#22d3ee', '#06b6d4', '#0891b2', '#0e7490'],
+            emerald: ['#ecfdf5', '#d1fae5', '#a7f3d0', '#34d399', '#10b981', '#059669', '#047857'],
+            indigo:  ['#eef2ff', '#e0e7ff', '#c7d2fe', '#818cf8', '#6366f1', '#4f46e5', '#4338ca'],
+            purple:  ['#faf5ff', '#f3e8ff', '#e9d5ff', '#c084fc', '#a855f7', '#9333ea', '#7e22ce'],
+            rose:    ['#fff1f2', '#ffe4e6', '#fecdd3', '#fb7185', '#f43f5e', '#e11d48', '#be123c'],
+            amber:   ['#fffbeb', '#fef3c7', '#fde68a', '#fbbf24', '#f59e0b', '#d97706', '#b45309'],
+            sky:     ['#f0f9ff', '#e0f2fe', '#bae6fd', '#38bdf8', '#0ea5e9', '#0284c7', '#0369a1'],
+            red:     ['#fef2f2', '#fee2e2', '#fecaca', '#f87171', '#ef4444', '#dc2626', '#b91c1c'],
+            blue:    ['#eff6ff', '#dbeafe', '#bfdbfe', '#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'],
+            fuchsia: ['#fdf4ff', '#fae8ff', '#f5d0fe', '#e879f9', '#d946ef', '#c026d3', '#a21caf'],
+            teal:    ['#f0fdfa', '#ccfbf1', '#99f6e4', '#2dd4bf', '#14b8a6', '#0d9488', '#0f766e'],
+            orange:  ['#fff7ed', '#ffedd5', '#fed7aa', '#fb923c', '#f97316', '#ea580c', '#c2410c']
+        };
+
+        function themeVars(theme) {
+            const c = THEMES[theme] || THEMES.indigo;
+            return `--t50:${c[0]};--t100:${c[1]};--t200:${c[2]};--t400:${c[3]};--t500:${c[4]};--t600:${c[5]};--t700:${c[6]};`;
+        }
+
+        function md(s) {
+            return String(s).replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>');
+        }
+
+        function renderEliteBox() {
+            const grid = document.getElementById('eliteGridBox');
+            grid.innerHTML = eliteExBox.map(ex => `
+                <article class="xc" style="${themeVars(ex.theme)}">
+                    <div class="xc-blob"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-4 mb-5">
+                            <div class="xc-icon"><i class="fas ${ex.icon.split(' ')[0]}"></i></div>
+                            <div>
+                                <span class="xc-tag">${ex.tag}</span>
+                                <h3 class="font-heading font-black text-slate-800 text-xl mt-1.5 leading-tight">${ex.title}</h3>
+                            </div>
+                        </div>
+
+                        <div class="xc-problem">${ex.problem}</div>
+
+                        <div class="solution-content xc-sol" id="ebox-sol-${ex.id}">
+                            <div class="solution-inner">
+                                <div class="xc-sol-body">
+                                    <h4 class="font-bold text-slate-800 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
+                                        <i class="fas fa-list-check" style="color:var(--t500)"></i> Desglose del Procedimiento
+                                    </h4>
+                                    <ul class="xc-steps">
+                                        ${ex.steps.map((step, idx) => `
+                                        <li class="xc-step">
+                                            <span class="xc-num">${idx + 1}</span>
+                                            <span class="pt-0.5 leading-relaxed">${md(step)}</span>
+                                        </li>`).join('')}
+                                    </ul>
+                                    <div class="xc-answer">
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-calculator" style="color:var(--t400)"></i>
+                                            <span class="xc-op">${ex.op}</span>
+                                        </div>
+                                        <div class="xc-ans">
+                                            <small>Respuesta</small>
+                                            <strong>${ex.ans}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="button" onclick="toggleEliteBox(${ex.id})" id="ebox-btn-${ex.id}" class="xc-btn" aria-expanded="false" aria-controls="ebox-sol-${ex.id}">
+                            <i class="fas fa-eye mr-2"></i> Ver Solución Paso a Paso
+                        </button>
+                    </div>
+                </article>
+            `).join('');
+        }
+
+        function toggleEliteBox(id) {
+            const content = document.getElementById(`ebox-sol-${id}`);
+            const btn = document.getElementById(`ebox-btn-${id}`);
+            const opening = !content.classList.contains('open');
+            content.classList.toggle('open', opening);
+            btn.classList.toggle('is-open', opening);
+            btn.setAttribute('aria-expanded', String(opening));
+            btn.innerHTML = opening
+                ? '<i class="fas fa-eye-slash mr-2"></i> Ocultar Solución'
+                : '<i class="fas fa-eye mr-2"></i> Ver Solución Paso a Paso';
+        }
+
+        function checkMCQ(qId, opt, isCorrect, btnElement) {
+            const feedback = document.getElementById(`mcq-${qId}-feedback`);
+
+            Array.from(btnElement.parentElement.children).forEach(btn => btn.classList.remove('is-correct', 'is-wrong'));
+            btnElement.classList.add(isCorrect ? 'is-correct' : 'is-wrong');
+
+            feedback.classList.remove('hidden');
+            if (isCorrect) {
+                feedback.className = "rounded-2xl p-5 text-base font-bold mt-4 bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-inner";
+                if (qId === 'bx1') feedback.innerHTML = `<i class="fas fa-check-circle mr-2 text-xl align-middle"></i> ¡Correcto! La caja abarca desde $Q_1$ (25%) hasta $Q_3$ (75%), por lo tanto contiene exactamente el 50% central de los datos.`;
+                if (qId === 'bx2') feedback.innerHTML = `<i class="fas fa-check-circle mr-2 text-xl align-middle"></i> ¡Excelente! Si la mediana está pegada a $Q_3$, la caja izquierda y el bigote izquierdo son más largos (Sesgo Izquierdo). Significa que la masa de estudiantes obtuvo notas ALTAS, dejando una "cola" de pocos estudiantes con notas muy bajas.`;
+            } else {
+                feedback.className = "rounded-2xl p-5 text-base font-bold mt-4 bg-rose-100 text-rose-800 border border-rose-300 shadow-inner";
+                feedback.innerHTML = `<i class="fas fa-times-circle mr-2 text-xl align-middle"></i> Incorrecto. Revisa la guía visual de conceptos y vuelve a intentarlo.`;
+            }
+            typeset(feedback);
+        }
+
+        function toggleRubric(id) {
+            const el = document.getElementById(id);
+            if(el.classList.contains('open')) el.classList.remove('open');
+            else el.classList.add('open');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            processBoxplot('both');
+            renderEliteBox();
+            typeset();
+        });
+    </script>
+</body>
+</html>
+```eof
